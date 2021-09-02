@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 from tcp import Servidor
+from tcp import Conexao
 import re
 
 
@@ -23,7 +24,17 @@ def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
     conexao.registrar_recebedor(dados_recebidos)
 
+def retorna_PONG(Conexao, dados):
+        if 'PING ' in dados:
+            codigo_ping = dados.split('PING ')[-1] # tentando pegar so o q vem depois de PING
+            resposta_pong = ':server PONG server :{}'.format(codigo_ping)   # formando o PONG
+            Conexao.enviar(Conexao, resposta_pong.encode('UTF-8'))
 
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
 asyncio.get_event_loop().run_forever()
+
+print("passou!")
+dados = servidor.recv(2048).decode('UTF-8')    # Recebendo dados do test1 e transformando de binario
+print(dados)
+Servidor.retorna_PONG(servidor, dados)
