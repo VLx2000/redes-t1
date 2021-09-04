@@ -19,29 +19,41 @@ def dados_residuais(conexao, dados):
     tem_residuo = hasattr(conexao, 'residuo')   # verifica se conexao possui residuo
     if not tem_residuo:
         if dados.endswith(b'\n'):
-        #if '\n' in dados:  # TO DO cortar dados no \n e criar dois residuos diferentes ???
-            return dados        # se n tem residuo e termina com \n sisplesmente retorna o dado
+            return dados                        # se não tem residuo e termina com \n, retorna o dado
         else:
-            conexao.residuo = dados 
-            return 0            # se n tem residuo e NÃO termina com \n cria novo residuo
+            conexao.residuo = dados             # se não tem residuo e NÃO termina com \n
+            return conexao.residuo              # cria e retorna o novo resíduo
     else:
         conexao.residuo += dados
-        if dados.endswith(b'\n'):
-            return conexao.residuo  # se termina com \n e tem residuo junta tudo e retorna o dado completo
-        else:
-            return 0                # se NÂO termina com \n adiciona nos residuos os dados e retorna um dado invalido
+        return conexao.residuo                  # retorna o residuo completo, ou incompleto 
+    
 
 def dados_recebidos(conexao, dados):
     if dados == b'':
         return sair(conexao)
     
-    dados = dados_residuais(conexao, dados)
-    #conexao.enviar(b':server PONG server :' + dados.split(b' ', 1)[1])
-    if not dados == 0:
-        if dados.startswith(b'PING '):
-            retorna_PONG(conexao, dados) 
-        print(conexao, dados)
+    dados = dados_residuais(conexao, dados)        
 
+    # Verificando se há algum \n dentre os dados
+    if dados.find(b'\n') != -1:
+        
+        # Separando as mensagem pelo \n
+        dados_separados = dados.split(b'\n')
+        
+        # Verificando se é uma mensagem de dados incompleta
+        if not dados.endswith(b'\n'):
+            conexao.residuo = dados_separados[len(dados_separados) - 1]     # atualizando resíduo  
+            
+            # residuo é retirado, deixando somente as mensagens que estão completas
+            dados_separados.pop()                                           
+        
+        
+        for i in range(0, len(dados_separados)):
+            mensagem = dados_separados[i] + b'\n'   # adicionando \n que foi retirado do método .split() à mensagem
+            if mensagem.startswith(b'PING'):
+                retorna_PONG(conexao, mensagem)
+            print(conexao, mensagem)
+            
 
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
