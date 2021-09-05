@@ -14,7 +14,6 @@ def sair(conexao):
     conexao.fechar()
 
 
-# funciona com mensagens quebradas mas n com varias msgs ao mesmo tempo
 def dados_residuais(conexao, dados):
     tem_residuo = hasattr(conexao, 'residuo')   # verifica se conexao possui residuo
     if not tem_residuo:
@@ -46,12 +45,13 @@ def dados_recebidos(conexao, dados):
             
             # residuo é retirado, deixando somente as mensagens que estão completas
             dados_separados.pop()                                           
-        
-        
+    
         for i in range(0, len(dados_separados)):
             mensagem = dados_separados[i] + b'\n'   # adicionando \n que foi retirado do método .split() à mensagem
             if mensagem.startswith(b'PING'):
                 retorna_PONG(conexao, mensagem)
+            elif mensagem.startswith(b'NICK'):
+                define_nick(conexao, mensagem)
             print(conexao, mensagem)
             
 
@@ -64,6 +64,20 @@ def retorna_PONG(conexao, dados):
         codigo_ping = dados.split(b' ', 1)[1] # tentando pegar so o q vem depois de PING
         resposta_pong = b':server PONG server :' + codigo_ping   # formando o PONG
         conexao.enviar(resposta_pong)
+        
+
+def define_nick(conexao, dados):
+        conexao.apelido = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
+        apelido_valido = validar_nome(conexao.apelido)
+        
+        if apelido_valido:
+            resposta_welcome = b':server 001 ' + conexao.apelido + b' :Welcome\r\n'
+            resposta_file_missing = b':server 422 ' + conexao.apelido + b' :MOTD File is missing\r\n'
+            conexao.enviar(resposta_welcome)
+            conexao.enviar(resposta_file_missing)
+        else:
+            resposta_erroneus_nickname = b':server 432 * ' + conexao.apelido + b' :Erroneous nickname\r\n'
+            conexao.enviar(resposta_erroneus_nickname)            
             
             
 servidor = Servidor(6667)
