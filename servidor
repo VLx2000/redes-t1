@@ -12,19 +12,6 @@ def validar_nome(nome):
 def sair(conexao):
     print(conexao, 'conexão fechada')
     conexao.fechar()
-
-
-def dados_residuais(conexao, dados):
-    tem_residuo = hasattr(conexao, 'residuo')   # verifica se conexao possui residuo
-    if not tem_residuo:
-        if dados.endswith(b'\n'):
-            return dados                        # se não tem residuo e termina com \n, retorna o dado
-        else:
-            conexao.residuo = dados             # se não tem residuo e NÃO termina com \n
-            return conexao.residuo              # cria e retorna o novo resíduo
-    else:
-        conexao.residuo += dados
-        return conexao.residuo                  # retorna o residuo completo, ou incompleto 
     
 
 def dados_recebidos(conexao, dados):
@@ -65,6 +52,19 @@ def retorna_PONG(conexao, dados):
         resposta_pong = b':server PONG server :' + codigo_ping   # formando o PONG
         conexao.enviar(resposta_pong)
         
+
+def dados_residuais(conexao, dados):
+    tem_residuo = hasattr(conexao, 'residuo')   # verifica se conexao possui residuo
+    if not tem_residuo:
+        if dados.endswith(b'\n'):
+            return dados                        # se não tem residuo e termina com \n, retorna o dado
+        else:
+            conexao.residuo = dados             # se não tem residuo e NÃO termina com \n
+            return conexao.residuo              # cria e retorna o novo resíduo
+    else:
+        conexao.residuo += dados
+        return conexao.residuo                  # retorna o residuo completo, ou incompleto 
+
 
 def define_nick(conexao, dados):
         conexao.apelido = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
