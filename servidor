@@ -4,6 +4,7 @@ from tcp import Servidor
 from tcp import Conexao
 import re
 
+apelidos = {}
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -67,17 +68,30 @@ def dados_residuais(conexao, dados):
 
 
 def define_nick(conexao, dados):
-        conexao.apelido = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
-        apelido_valido = validar_nome(conexao.apelido)
-        
-        if apelido_valido:
-            resposta_welcome = b':server 001 ' + conexao.apelido + b' :Welcome\r\n'
-            resposta_file_missing = b':server 422 ' + conexao.apelido + b' :MOTD File is missing\r\n'
-            conexao.enviar(resposta_welcome)
-            conexao.enviar(resposta_file_missing)
+    tem_apelido = hasattr(conexao, 'apelido')   # verifica se conexao possui apelido
+    adicionar_apelido = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
+    apelido_valido = validar_nome(adicionar_apelido)
+    if apelido_valido:           
+        if adicionar_apelido.upper() in apelidos.values():
+            if tem_apelido:
+                resposta_nickname_in_use = b':server 433 %s %s :Nickname is already in use\r\n' % (conexao.apelido, adicionar_apelido)
+            else:
+                resposta_nickname_in_use = b':server 433 * %s :Nickname is already in use\r\n' % (adicionar_apelido)
+            conexao.enviar(resposta_nickname_in_use)
         else:
-            resposta_erroneus_nickname = b':server 432 * ' + conexao.apelido + b' :Erroneous nickname\r\n'
-            conexao.enviar(resposta_erroneus_nickname)            
+            if tem_apelido:
+                resposta_troca = b':%s NICK %s\r\n' % (conexao.apelido, adicionar_apelido)
+                conexao.enviar(resposta_troca)
+            else:
+                resposta_welcome = b':server 001 %s :Welcome\r\n' % (adicionar_apelido)
+                resposta_file_missing = b':server 422 %s :MOTD File is missing\r\n' % (adicionar_apelido)
+                conexao.enviar(resposta_welcome)
+                conexao.enviar(resposta_file_missing)
+            apelidos[conexao] = adicionar_apelido.upper()
+            conexao.apelido = adicionar_apelido
+    else:
+        resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (adicionar_apelido)
+        conexao.enviar(resposta_erroneus_nickname)            
             
             
 servidor = Servidor(6667)
