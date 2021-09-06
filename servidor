@@ -40,6 +40,8 @@ def dados_recebidos(conexao, dados):
                 retorna_PONG(conexao, mensagem)
             elif mensagem.startswith(b'NICK'):
                 define_nick(conexao, mensagem)
+            elif mensagem.startswith(b'PRIVMSG'):
+                mensagem_privada(conexao, mensagem)
             print(conexao, mensagem)
             
 
@@ -92,7 +94,16 @@ def define_nick(conexao, dados):
         resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (apelido_a_adicionar)
         conexao.enviar(resposta_erroneus_nickname)            
             
-            
+
+def mensagem_privada(conexao, dados):
+    destinatario = dados.split(b' ', 2)[1]      # tentando pegar o q vem depois de PRIVMSG e antes de :
+    conteudo = dados.split(b':', 1)[1]          # tentando pegar so o q vem depois de :
+    msg_priv = b':%s PRIVMSG %s :%s' % (conexao.apelido, destinatario, conteudo)
+    for n_conexao in apelidos_de_usuario:
+        if n_conexao.apelido.upper() == destinatario.upper():
+            n_conexao.enviar(msg_priv)
+    
+
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
 asyncio.get_event_loop().run_forever()
