@@ -74,7 +74,7 @@ def define_nick(conexao, dados):
     ja_tem_apelido = hasattr(conexao, 'apelido')   # verifica se conexao ja possui apelido
     apelido_a_adicionar = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
     if validar_nome(apelido_a_adicionar):                                  # se o apelido eh valido
-        if apelido_a_adicionar.upper() in servidor.apelidos_de_usuario.values():    # e n esta no dicionario
+        if apelido_a_adicionar.upper() in apelidos_de_usuario.values():    # e n esta no dicionario
             if ja_tem_apelido:
                 resposta_nickname_in_use = b':server 433 %s %s :Nickname is already in use\r\n' % (conexao.apelido, apelido_a_adicionar)
             else:
@@ -89,7 +89,7 @@ def define_nick(conexao, dados):
                 resposta_file_missing = b':server 422 %s :MOTD File is missing\r\n' % (apelido_a_adicionar)
                 conexao.enviar(resposta_welcome)
                 conexao.enviar(resposta_file_missing)
-            servidor.apelidos_de_usuario[conexao] = apelido_a_adicionar.upper()
+            apelidos_de_usuario[conexao] = apelido_a_adicionar.upper()
             conexao.apelido = apelido_a_adicionar
     else:
         resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (apelido_a_adicionar)
@@ -100,12 +100,17 @@ def mensagem_privada(conexao, dados):
     destinatario = dados.split(b' ', 2)[1]      # tentando pegar o q vem depois de PRIVMSG e antes de :
     conteudo = dados.split(b':', 1)[1]          # tentando pegar so o q vem depois de :
     msg_priv = b':%s PRIVMSG %s :%s' % (conexao.apelido, destinatario, conteudo)
-    if destinatario.startswith(b'#') and conexao.canal.upper() == destinatario.upper():
-        for n_conexao in servidor.canais:
-            if n_conexao.canal.upper() == destinatario.upper() and n_conexao.apelido.upper() != conexao.apelido.upper():
-                n_conexao.enviar(msg_priv)
-    elif not destinatario.startswith(b'#'):
-        for n_conexao in servidor.apelidos_de_usuario:
+    
+    #print("-----------------------------")
+    #print(canais)
+    #print("-----------------------------")
+    
+    if destinatario.startswith(b'#'):
+        for i in range (0, len(canais[destinatario.upper()]) - 1):
+            #print(msg_priv)
+            conexao.enviar(msg_priv)
+    else:
+        for n_conexao in apelidos_de_usuario:
             if n_conexao.apelido.upper() == destinatario.upper():
                 n_conexao.enviar(msg_priv)
             
@@ -113,19 +118,21 @@ def mensagem_privada(conexao, dados):
 def entrar_canal(conexao, dados):
     canal_a_entrar = dados.split(b' ', 1)[1].replace(b'\r\n', b'')      # tentando pegar o q vem depois de JOIN
     if canal_a_entrar.startswith(b'#') and validar_nome(canal_a_entrar.replace(b'#',b'')):
-        servidor.canais[conexao] = canal_a_entrar.upper()
-        conexao.canal = canal_a_entrar
+        
+        if canal_a_entrar.upper() in canais.keys():
+            canais[canal_a_entrar.upper()].append(conexao.apelido)
+        else:
+            canais.update({canal_a_entrar.upper() : [conexao.apelido]})
+        
         msg_canal = b':%s JOIN :%s\r\n' % (conexao.apelido, canal_a_entrar)
-        for n_conexao in servidor.canais:
-            if n_conexao.canal.upper() == canal_a_entrar.upper():   # ira mandar msg para pessoas no msm canal
-                n_conexao.enviar(msg_canal)
+        conexao.enviar(msg_canal)
     else:
         msg_canal = b':server 403 %s :No such channel' % canal_a_entrar
         conexao.enviar(msg_canal)
 
 
+canais = {}
+apelidos_de_usuario = {}
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
-servidor.canais = {}
-servidor.apelidos_de_usuario = {}
 asyncio.get_event_loop().run_forever()
