@@ -50,6 +50,8 @@ def dados_recebidos(conexao, dados):
 
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
+    canais[conexao] = []
+    conexao.canal = []
     conexao.registrar_recebedor(dados_recebidos)
 
 
@@ -102,16 +104,13 @@ def mensagem_privada(conexao, dados):
     destinatario = dados.split(b' ', 2)[1]      # tentando pegar o q vem depois de PRIVMSG e antes de :
     conteudo = dados.split(b':', 1)[1]          # tentando pegar so o q vem depois de :
     msg_priv = b':%s PRIVMSG %s :%s' % (conexao.apelido, destinatario, conteudo)
-    
-    #print("-----------------------------")
-    #print(canais)
-    #print("-----------------------------")
-    
-    if destinatario.startswith(b'#'):
-        for i in range (0, len(canais[destinatario.upper()]) - 1):
-            #print(msg_priv)
-            conexao.enviar(msg_priv)
-    else:
+    aux_uppercase = [x.upper() for x in conexao.canal]
+    if destinatario.startswith(b'#') and destinatario.upper() in aux_uppercase:
+        for n_conexao in canais:
+            aux_uppercase = [x.upper() for x in n_conexao.canal]
+            if destinatario.upper() in aux_uppercase and n_conexao.apelido.upper() != conexao.apelido.upper():
+                n_conexao.enviar(msg_priv)
+    elif not destinatario.startswith(b'#'):
         for n_conexao in apelidos_de_usuario:
             if n_conexao.apelido.upper() == destinatario.upper():
                 n_conexao.enviar(msg_priv)
@@ -120,16 +119,17 @@ def mensagem_privada(conexao, dados):
 def entrar_canal(conexao, dados):
     canal_a_entrar = dados.split(b' ', 1)[1].replace(b'\r\n', b'')      # tentando pegar o q vem depois de JOIN
     if canal_a_entrar.startswith(b'#') and validar_nome(canal_a_entrar.replace(b'#',b'')):
-        
-        if canal_a_entrar.upper() in canais.keys():
-            canais[canal_a_entrar.upper()].append(conexao.apelido)
-        else:
-            canais.update({canal_a_entrar.upper() : [conexao.apelido]})
-        
+        canais[conexao].append(canal_a_entrar.upper())
+        conexao.canal.append(canal_a_entrar)
         msg_canal = b':%s JOIN :%s\r\n' % (conexao.apelido, canal_a_entrar)
-        conexao.enviar(msg_canal)
+        for n_conexao in canais:
+            aux_uppercase = [x.upper() for x in n_conexao.canal]
+            if canal_a_entrar.upper() in aux_uppercase:   # ira mandar msg para pessoas no msm canal
+                #print(msg_canal)
+                n_conexao.enviar(msg_canal)
     else:
         msg_canal = b':server 403 %s :No such channel' % canal_a_entrar
+        #print(msg_canal)
         conexao.enviar(msg_canal)
 
 
