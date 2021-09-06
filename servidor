@@ -4,7 +4,7 @@ from tcp import Servidor
 from tcp import Conexao
 import re
 
-apelidos = {}
+apelidos_de_usuario = {}
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -68,29 +68,28 @@ def dados_residuais(conexao, dados):
 
 
 def define_nick(conexao, dados):
-    tem_apelido = hasattr(conexao, 'apelido')   # verifica se conexao possui apelido
-    adicionar_apelido = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
-    apelido_valido = validar_nome(adicionar_apelido)
-    if apelido_valido:           
-        if adicionar_apelido.upper() in apelidos.values():
-            if tem_apelido:
-                resposta_nickname_in_use = b':server 433 %s %s :Nickname is already in use\r\n' % (conexao.apelido, adicionar_apelido)
+    ja_tem_apelido = hasattr(conexao, 'apelido')   # verifica se conexao ja possui apelido
+    apelido_a_adicionar = dados.split(b' ', 1)[1].replace(b'\r\n', b'')
+    if validar_nome(apelido_a_adicionar):                                  # se o apelido eh valido
+        if apelido_a_adicionar.upper() in apelidos_de_usuario.values():    # e n esta no dicionario
+            if ja_tem_apelido:
+                resposta_nickname_in_use = b':server 433 %s %s :Nickname is already in use\r\n' % (conexao.apelido, apelido_a_adicionar)
             else:
-                resposta_nickname_in_use = b':server 433 * %s :Nickname is already in use\r\n' % (adicionar_apelido)
+                resposta_nickname_in_use = b':server 433 * %s :Nickname is already in use\r\n' % (apelido_a_adicionar)
             conexao.enviar(resposta_nickname_in_use)
         else:
-            if tem_apelido:
-                resposta_troca = b':%s NICK %s\r\n' % (conexao.apelido, adicionar_apelido)
+            if ja_tem_apelido:
+                resposta_troca = b':%s NICK %s\r\n' % (conexao.apelido, apelido_a_adicionar)
                 conexao.enviar(resposta_troca)
             else:
-                resposta_welcome = b':server 001 %s :Welcome\r\n' % (adicionar_apelido)
-                resposta_file_missing = b':server 422 %s :MOTD File is missing\r\n' % (adicionar_apelido)
+                resposta_welcome = b':server 001 %s :Welcome\r\n' % (apelido_a_adicionar)
+                resposta_file_missing = b':server 422 %s :MOTD File is missing\r\n' % (apelido_a_adicionar)
                 conexao.enviar(resposta_welcome)
                 conexao.enviar(resposta_file_missing)
-            apelidos[conexao] = adicionar_apelido.upper()
-            conexao.apelido = adicionar_apelido
+            apelidos_de_usuario[conexao] = apelido_a_adicionar.upper()
+            conexao.apelido = apelido_a_adicionar
     else:
-        resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (adicionar_apelido)
+        resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (apelido_a_adicionar)
         conexao.enviar(resposta_erroneus_nickname)            
             
             
