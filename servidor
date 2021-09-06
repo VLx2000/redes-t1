@@ -45,13 +45,14 @@ def dados_recebidos(conexao, dados):
                 mensagem_privada(conexao, mensagem)
             elif mensagem.startswith(b'JOIN'):
                 entrar_canal(conexao, dados)
+            elif mensagem.startswith(b'PART'):
+                sair_canal(conexao, dados)
             print(conexao, mensagem)
             
 
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
     canais[conexao] = []
-    conexao.canais_pertencentes = []
     conexao.registrar_recebedor(dados_recebidos)
 
 
@@ -104,11 +105,9 @@ def mensagem_privada(conexao, dados):
     destinatario = dados.split(b' ', 2)[1]      # tentando pegar o q vem depois de PRIVMSG e antes de :
     conteudo = dados.split(b':', 1)[1]          # tentando pegar so o q vem depois de :
     msg_priv = b':%s PRIVMSG %s :%s' % (conexao.apelido, destinatario, conteudo)
-    aux_uppercase = [x.upper() for x in conexao.canais_pertencentes]                # lista de canais em MAIÚSCULAS que a conexao pertence
-    if destinatario.startswith(b'#') and destinatario.upper() in aux_uppercase:
+    if destinatario.startswith(b'#') and destinatario.lower() in canais.get(conexao):
         for conexao_usuario in canais:
-            aux_uppercase = [x.upper() for x in conexao_usuario.canais_pertencentes] # lista de canais em MAIÚSCULAS que a conexao pertence
-            if destinatario.upper() in aux_uppercase and conexao_usuario.apelido.upper() != conexao.apelido.upper():
+            if destinatario.lower() in canais.get(conexao_usuario) and conexao_usuario.apelido.upper() != conexao.apelido.upper():
                 conexao_usuario.enviar(msg_priv)
     elif not destinatario.startswith(b'#'):
         for conexao_usuario in apelidos_de_usuario:
@@ -117,24 +116,32 @@ def mensagem_privada(conexao, dados):
             
 
 def entrar_canal(conexao, dados):
-    canal_a_entrar = dados.split(b' ', 1)[1].replace(b'\r\n', b'')      # tentando pegar o q vem depois de JOIN
+    canal_a_entrar = dados.split(b' ', 1)[1].replace(b'\r\n', b'').lower()      # tentando pegar o q vem depois de JOIN
     if canal_a_entrar.startswith(b'#') and validar_nome(canal_a_entrar.replace(b'#',b'')):
-        canais[conexao].append(canal_a_entrar.upper())
-        conexao.canais_pertencentes.append(canal_a_entrar)
+        canais[conexao].append(canal_a_entrar)              # usario entra no canal
         msg_canal = b':%s JOIN :%s\r\n' % (conexao.apelido, canal_a_entrar)
         for conexao_usuario in canais:
-            aux_uppercase = [x.upper() for x in conexao_usuario.canais_pertencentes] # lista de canais em MAIÚSCULAS que a conexao pertence
-            if canal_a_entrar.upper() in aux_uppercase:   # ira mandar msg para pessoas no msm canal
-                #print(msg_canal)
+            if canal_a_entrar in canais.get(conexao_usuario):   # ira mandar msg para pessoas no msm canal
                 conexao_usuario.enviar(msg_canal)
     else:
         msg_canal = b':server 403 %s :No such channel' % canal_a_entrar
-        #print(msg_canal)
         conexao.enviar(msg_canal)
 
-    
-    
 
+def sair_canal(conexao, dados):
+    canal_a_sair = dados.split(b' ', 2)[1].replace(b'\r\n', b'').lower()      # tentando pegar o q vem depois de JOIN
+    msg_saida_canal = b':%s PART %s\r\n' % (conexao.apelido, canal_a_sair)
+    '''Exemplo de como fiz pop
+    a = {'v': [1,2,3,4],'u' : [6,7,8,9]}
+    a['v'].pop(a.get('v').index(2))
+    print(a)
+    '''
+    if canal_a_sair in canais.get(conexao):
+        for conexao_usuario in canais:
+            if canal_a_sair in canais.get(conexao_usuario):   # ira mandar msg para pessoas no msm canal e ele msm
+                conexao_usuario.enviar(msg_saida_canal)
+        canais[conexao].pop(canais.get(conexao).index(canal_a_sair))    # removendo canal do dicionario do usuario
+    
 
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
