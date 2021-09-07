@@ -3,9 +3,10 @@ import asyncio
 from tcp import Servidor
 from tcp import Conexao
 import re
-#oba
+
 canais = {}                 # 'Conexao' -> lista_de_canais_pertencentes
 apelidos_de_usuario = {}
+
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -67,9 +68,9 @@ def conexao_aceita(conexao):
 
 
 def retorna_PONG(conexao, dados):
-        codigo_ping = dados.split(b' ', 1)[1] # tentando pegar so o q vem depois de PING
-        resposta_pong = b':server PONG server :' + codigo_ping   # formando o PONG
-        conexao.enviar(resposta_pong)
+    codigo_ping = dados.split(b' ', 1)[1] # tentando pegar so o q vem depois de PING
+    resposta_pong = b':server PONG server :' + codigo_ping   # formando o PONG
+    conexao.enviar(resposta_pong)
         
 
 def dados_residuais(conexao, dados):
@@ -107,7 +108,10 @@ def define_nick(conexao, dados):
             apelidos_de_usuario[conexao] = apelido_a_adicionar.upper()
             conexao.apelido = apelido_a_adicionar
     else:
-        resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (apelido_a_adicionar)
+        if ja_tem_apelido:
+            resposta_erroneus_nickname = b':server 432 %s %s :Erroneous nickname\r\n' % (conexao.apelido, apelido_a_adicionar)
+        else:
+            resposta_erroneus_nickname = b':server 432 * %s :Erroneous nickname\r\n' % (apelido_a_adicionar)
         conexao.enviar(resposta_erroneus_nickname)            
             
 
@@ -135,9 +139,9 @@ def entrar_canal(conexao, dados):
             if canal_a_entrar in canais.get(conexao_usuario):   # ira mandar msg para pessoas no msm canal
                 conexao_usuario.enviar(msg_canal)
                 lista_membros.append(conexao_usuario.apelido)
-        print(lista_membros)
-        msg_lista = b':server 353 %s = %s :%s\r\n' % (conexao.apelido, canal_a_entrar, b' '.join(sorted(lista_membros)))
-        print(msg_lista)
+        msg = b':server 353 %s = %s ' % (conexao.apelido, canal_a_entrar)
+        lista = b':%s\r\n' % (b' '.join(sorted(lista_membros)))
+        msg_lista = msg + lista
         conexao.enviar(msg_lista)
         msg_fim_lista = b':server 366 %s %s :End of /NAMES list.\r\n' % (conexao.apelido, canal_a_entrar)
         conexao.enviar(msg_fim_lista)
