@@ -3,7 +3,7 @@ import asyncio
 from tcp import Servidor
 from tcp import Conexao
 import re
-
+#oba
 canais = {}                 # 'Conexao' -> lista_de_canais_pertencentes
 apelidos_de_usuario = {}
 
