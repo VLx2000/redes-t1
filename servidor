@@ -12,6 +12,16 @@ def validar_nome(nome):
 
 
 def sair(conexao):
+    canais_da_conexao = canais[conexao]
+    
+    for canal in canais_da_conexao:
+        for conexao_usuario in canais:
+            if canal in canais.get(conexao_usuario) and conexao != conexao_usuario:
+                resposta_saida = b':%s QUIT :Connection closed' % (conexao.apelido)
+                print(resposta_saida)
+                conexao_usuario.enviar(resposta_saida)        
+    canais.pop(conexao)
+    apelidos_de_usuario.pop(conexao)   
     print(conexao, 'conexão fechada')
     conexao.fechar()
     
