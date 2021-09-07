@@ -12,16 +12,16 @@ def validar_nome(nome):
 
 
 def sair(conexao):
-    canais_da_conexao = canais[conexao]
+    canais_da_conexao = canais.get(conexao)
     
     for canal in canais_da_conexao:
         for conexao_usuario in canais:
-            if canal in canais.get(conexao_usuario) and conexao != conexao_usuario:
-                resposta_saida = b':%s QUIT :Connection closed' % (conexao.apelido)
+            if canal in canais.get(conexao_usuario) and conexao.apelido.upper() != conexao_usuario.apelido.upper():
+                resposta_saida = b':%s QUIT :Connection closed\r\n' % (conexao.apelido)
                 print(resposta_saida)
-                conexao_usuario.enviar(resposta_saida)        
+                conexao_usuario.enviar(resposta_saida)
     canais.pop(conexao)
-    apelidos_de_usuario.pop(conexao)   
+    apelidos_de_usuario.pop(conexao)
     print(conexao, 'conexão fechada')
     conexao.fechar()
     
@@ -139,7 +139,7 @@ def entrar_canal(conexao, dados):
 
 
 def sair_canal(conexao, dados):
-    canal_a_sair = dados.split(b' ', 2)[1].replace(b'\r\n', b'').lower()      # tentando pegar o q vem depois de JOIN
+    canal_a_sair = dados.split(b' ', 2)[1].replace(b'\r\n', b'').lower()      # tentando pegar o q vem depois de PART
     msg_saida_canal = b':%s PART %s\r\n' % (conexao.apelido, canal_a_sair)
     '''Exemplo de como fiz pop
     a = {'v': [1,2,3,4],'u' : [6,7,8,9]}
