@@ -127,12 +127,20 @@ def mensagem_privada(conexao, dados):
 
 def entrar_canal(conexao, dados):
     canal_a_entrar = dados.split(b' ', 1)[1].replace(b'\r\n', b'').lower()      # tentando pegar o q vem depois de JOIN
+    lista_membros = []
     if canal_a_entrar.startswith(b'#') and validar_nome(canal_a_entrar.replace(b'#',b'')):
         canais[conexao].append(canal_a_entrar)              # usario entra no canal
         msg_canal = b':%s JOIN :%s\r\n' % (conexao.apelido, canal_a_entrar)
         for conexao_usuario in canais:
             if canal_a_entrar in canais.get(conexao_usuario):   # ira mandar msg para pessoas no msm canal
                 conexao_usuario.enviar(msg_canal)
+                lista_membros.append(conexao_usuario.apelido)
+        print(lista_membros)
+        msg_lista = b':server 353 %s = %s :%s\r\n' % (conexao.apelido, canal_a_entrar, b' '.join(sorted(lista_membros)))
+        print(msg_lista)
+        conexao.enviar(msg_lista)
+        msg_fim_lista = b':server 366 %s %s :End of /NAMES list.\r\n' % (conexao.apelido, canal_a_entrar)
+        conexao.enviar(msg_fim_lista)
     else:
         msg_canal = b':server 403 %s :No such channel' % canal_a_entrar
         conexao.enviar(msg_canal)
